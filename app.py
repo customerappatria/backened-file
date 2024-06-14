@@ -8,7 +8,8 @@ import logging
 from datetime import datetime, timedelta
 
 app = Quart(__name__)
-app = cors(app, allow_origin="*")
+# Update the CORS configuration to allow requests from your frontend domain
+app = cors(app, allow_origin="https://atriapower1.vercel.app")
 app.secret_key = secrets.token_hex(16)
 
 TWILIO_ACCOUNT_SID = "AC42ed38b869ba2e9bdd38a80a5909d282"
@@ -76,4 +77,4 @@ async def dashboard_data():
     return jsonify({'error': 'You are not authorized'}), 401
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
