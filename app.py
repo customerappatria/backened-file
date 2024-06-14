@@ -6,16 +6,14 @@ import asyncio
 import secrets
 import logging
 from datetime import datetime, timedelta
-import os
 
 app = Quart(__name__)
 app = cors(app, allow_origin="*")
 app.secret_key = secrets.token_hex(16)
 
-# Use environment variables for sensitive information
-TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
-TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
-TWILIO_SERVICE_SID = os.environ.get('TWILIO_SERVICE_SID')
+TWILIO_ACCOUNT_SID = "AC42ed38b869ba2e9bdd38a80a5909d282"
+TWILIO_AUTH_TOKEN = "1f171d4933f3fd52612b2042686999ff"
+TWILIO_SERVICE_SID = "VA71ab60a3c265411d5ab49db335d657f1"
 
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
@@ -45,6 +43,7 @@ async def send_otp():
             verification = client.verify.v2.services(TWILIO_SERVICE_SID).verifications.create(to=phone_number, channel='sms')
             return jsonify({'status': verification.status}), 200
         except Exception as e:
+            logging.error(f'Error sending OTP: {str(e)}')
             return jsonify({'error': str(e)}), 500
     return jsonify({'error': 'Phone number is required'}), 400
 
@@ -63,6 +62,7 @@ async def verify_otp():
                 return jsonify({'status': 'approved', 'session_token': session_token}), 200
             return jsonify({'status': 'denied'}), 400
         except Exception as e:
+            logging.error(f'Error verifying OTP: {str(e)}')
             return jsonify({'error': str(e)}), 500
     return jsonify({'error': 'Phone number and OTP are required'}), 400
 
@@ -72,12 +72,14 @@ async def dashboard_data():
     logging.info(f"Received session token: {session_token}")
     logging.info(f"Valid tokens: {valid_tokens}")
     if is_token_valid(session_token):
-        loop = asyncio.get_event_loop()
-        result = await loop.run_in_executor(None, main)
-        return jsonify(result)
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, main)
+            return jsonify(result)
+        except Exception as e:
+            logging.error(f'Error fetching dashboard data: {str(e)}')
+            return jsonify({'error': str(e)}), 500
     return jsonify({'error': 'You are not authorized'}), 401
 
-
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Use dynamic port assignment
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True)
