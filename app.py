@@ -1,5 +1,5 @@
 from quart import Quart, request, jsonify
-from quart_cors import cors
+from quart_cors import cors, route_cors
 from twilio.rest import Client
 from realtime_data import main
 import asyncio
@@ -8,8 +8,8 @@ import logging
 from datetime import datetime, timedelta
 
 app = Quart(__name__)
-# Update the CORS configuration to allow requests from your frontend domain
-app = cors(app, allow_origin="https://atriapower1.vercel.app")
+# Configure CORS to allow your frontend origin
+app = cors(app, allow_origin=["https://atriapower1.vercel.app"])
 app.secret_key = secrets.token_hex(16)
 
 TWILIO_ACCOUNT_SID = "AC42ed38b869ba2e9bdd38a80a5909d282"
@@ -36,6 +36,7 @@ def is_token_valid(token):
     return False
 
 @app.route('/api/send-otp', methods=['POST'])
+@route_cors(allow_origin=["https://atriapower1.vercel.app"])
 async def send_otp():
     data = await request.get_json()
     phone_number = data.get('phoneNumber')
@@ -48,6 +49,7 @@ async def send_otp():
     return jsonify({'error': 'Phone number is required'}), 400
 
 @app.route('/api/verify-otp', methods=['POST'])
+@route_cors(allow_origin=["https://atriapower1.vercel.app"])
 async def verify_otp():
     data = await request.get_json()
     phone_number = data.get('phoneNumber')
@@ -66,6 +68,7 @@ async def verify_otp():
     return jsonify({'error': 'Phone number and OTP are required'}), 400
 
 @app.route('/api/dashboard', methods=['GET'])
+@route_cors(allow_origin=["https://atriapower1.vercel.app"])
 async def dashboard_data():
     session_token = request.headers.get('Authorization')
     logging.info(f"Received session token: {session_token}")
