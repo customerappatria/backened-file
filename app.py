@@ -36,35 +36,45 @@ def is_token_valid(token):
 
 @app.route('/api/send-otp', methods=['POST'])
 async def send_otp():
-    data = await request.get_json()
-    phone_number = data.get('phoneNumber')
-    if phone_number:
-        try:
-            verification = client.verify.v2.services(TWILIO_SERVICE_SID).verifications.create(to=phone_number, channel='sms')
-            return jsonify({'status': verification.status}), 200
-        except Exception as e:
-            logging.error(f'Error sending OTP: {str(e)}')
-            return jsonify({'error': str(e)}), 500
-    return jsonify({'error': 'Phone number is required'}), 400
+    try:
+        data = await request.get_json()
+        logging.info(f'Received send-otp request data: {data}')
+        phone_number = data.get('phoneNumber')
+        if phone_number:
+            try:
+                verification = client.verify.v2.services(TWILIO_SERVICE_SID).verifications.create(to=phone_number, channel='sms')
+                return jsonify({'status': verification.status}), 200
+            except Exception as e:
+                logging.error(f'Error sending OTP: {str(e)}')
+                return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Phone number is required'}), 400
+    except Exception as e:
+        logging.error(f'Error processing send-otp request: {str(e)}')
+        return jsonify({'error': 'Bad request'}), 400
 
 @app.route('/api/verify-otp', methods=['POST'])
 async def verify_otp():
-    data = await request.get_json()
-    phone_number = data.get('phoneNumber')
-    otp_code = data.get('otp')
-    if phone_number and otp_code:
-        try:
-            verification_check = client.verify.v2.services(TWILIO_SERVICE_SID).verification_checks.create(to=phone_number, code=otp_code)
-            if verification_check.status == 'approved':
-                session_token = secrets.token_hex(16)
-                expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRATION_MINUTES)
-                valid_tokens[session_token] = expiration_time
-                return jsonify({'status': 'approved', 'session_token': session_token}), 200
-            return jsonify({'status': 'denied'}), 400
-        except Exception as e:
-            logging.error(f'Error verifying OTP: {str(e)}')
-            return jsonify({'error': str(e)}), 500
-    return jsonify({'error': 'Phone number and OTP are required'}), 400
+    try:
+        data = await request.get_json()
+        logging.info(f'Received verify-otp request data: {data}')
+        phone_number = data.get('phoneNumber')
+        otp_code = data.get('otp')
+        if phone_number and otp_code:
+            try:
+                verification_check = client.verify.v2.services(TWILIO_SERVICE_SID).verification_checks.create(to=phone_number, code=otp_code)
+                if verification_check.status == 'approved':
+                    session_token = secrets.token_hex(16)
+                    expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRATION_MINUTES)
+                    valid_tokens[session_token] = expiration_time
+                    return jsonify({'status': 'approved', 'session_token': session_token}), 200
+                return jsonify({'status': 'denied'}), 400
+            except Exception as e:
+                logging.error(f'Error verifying OTP: {str(e)}')
+                return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Phone number and OTP are required'}), 400
+    except Exception as e:
+        logging.error(f'Error processing verify-otp request: {str(e)}')
+        return jsonify({'error': 'Bad request'}), 400
 
 @app.route('/api/dashboard', methods=['GET'])
 async def dashboard_data():
