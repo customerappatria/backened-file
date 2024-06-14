@@ -1,20 +1,21 @@
 from quart import Quart, request, jsonify
-from quart_cors import cors, route_cors
+from quart_cors import cors
 from twilio.rest import Client
 from realtime_data import main
 import asyncio
 import secrets
 import logging
 from datetime import datetime, timedelta
+import os  # Add this import
 
 app = Quart(__name__)
-# Configure CORS to allow your frontend origin
-app = cors(app, allow_origin=["https://atriapower1.vercel.app"])
+app = cors(app, allow_origin="*")
 app.secret_key = secrets.token_hex(16)
 
-TWILIO_ACCOUNT_SID = "AC42ed38b869ba2e9bdd38a80a5909d282"
-TWILIO_AUTH_TOKEN = "1f171d4933f3fd52612b2042686999ff"
-TWILIO_SERVICE_SID = "VA71ab60a3c265411d5ab49db335d657f1"
+# Use environment variables for sensitive information
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
+TWILIO_SERVICE_SID = os.environ.get('TWILIO_SERVICE_SID')
 
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
@@ -36,7 +37,6 @@ def is_token_valid(token):
     return False
 
 @app.route('/api/send-otp', methods=['POST'])
-@route_cors(allow_origin=["https://atriapower1.vercel.app"])
 async def send_otp():
     data = await request.get_json()
     phone_number = data.get('phoneNumber')
@@ -49,7 +49,6 @@ async def send_otp():
     return jsonify({'error': 'Phone number is required'}), 400
 
 @app.route('/api/verify-otp', methods=['POST'])
-@route_cors(allow_origin=["https://atriapower1.vercel.app"])
 async def verify_otp():
     data = await request.get_json()
     phone_number = data.get('phoneNumber')
@@ -68,7 +67,6 @@ async def verify_otp():
     return jsonify({'error': 'Phone number and OTP are required'}), 400
 
 @app.route('/api/dashboard', methods=['GET'])
-@route_cors(allow_origin=["https://atriapower1.vercel.app"])
 async def dashboard_data():
     session_token = request.headers.get('Authorization')
     logging.info(f"Received session token: {session_token}")
@@ -80,4 +78,5 @@ async def dashboard_data():
     return jsonify({'error': 'You are not authorized'}), 401
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    port = int(os.environ.get('PORT', 5000))  # Use dynamic port assignment
+    app.run(host='0.0.0.0', port=port)
