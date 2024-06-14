@@ -6,7 +6,7 @@ import asyncio
 import secrets
 import logging
 from datetime import datetime, timedelta
-import os  # Add this import
+import os
 
 app = Quart(__name__)
 app = cors(app, allow_origin="*")
@@ -16,6 +16,9 @@ app.secret_key = secrets.token_hex(16)
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
 TWILIO_SERVICE_SID = os.environ.get('TWILIO_SERVICE_SID')
+
+if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_SERVICE_SID:
+    logging.error("Twilio credentials are not set in environment variables")
 
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
@@ -38,18 +41,23 @@ def is_token_valid(token):
 
 @app.route('/api/send-otp', methods=['POST'])
 async def send_otp():
+    logging.info("Send OTP endpoint hit")
     data = await request.get_json()
     phone_number = data.get('phoneNumber')
     if phone_number:
         try:
             verification = client.verify.v2.services(TWILIO_SERVICE_SID).verifications.create(to=phone_number, channel='sms')
+            logging.info(f"OTP sent to {phone_number}")
             return jsonify({'status': verification.status}), 200
         except Exception as e:
+            logging.error(f"Error sending OTP: {str(e)}")
             return jsonify({'error': str(e)}), 500
+    logging.error("Phone number is required")
     return jsonify({'error': 'Phone number is required'}), 400
 
 @app.route('/api/verify-otp', methods=['POST'])
 async def verify_otp():
+    logging.info("Verify OTP endpoint hit")
     data = await request.get_json()
     phone_number = data.get('phoneNumber')
     otp_code = data.get('otp')
@@ -60,21 +68,28 @@ async def verify_otp():
                 session_token = secrets.token_hex(16)
                 expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRATION_MINUTES)
                 valid_tokens[session_token] = expiration_time
+                logging.info(f"OTP verified for {phone_number}")
                 return jsonify({'status': 'approved', 'session_token': session_token}), 200
+            logging.warning(f"OTP denied for {phone_number}")
             return jsonify({'status': 'denied'}), 400
         except Exception as e:
+            logging.error(f"Error verifying OTP: {str(e)}")
             return jsonify({'error': str(e)}), 500
+    logging.error("Phone number and OTP are required")
     return jsonify({'error': 'Phone number and OTP are required'}), 400
 
 @app.route('/api/dashboard', methods=['GET'])
 async def dashboard_data():
+    logging.info("Dashboard data endpoint hit")
     session_token = request.headers.get('Authorization')
     logging.info(f"Received session token: {session_token}")
     logging.info(f"Valid tokens: {valid_tokens}")
     if is_token_valid(session_token):
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, main)
+        logging.info("Dashboard data retrieved successfully")
         return jsonify(result)
+    logging.warning("Unauthorized access attempt")
     return jsonify({'error': 'You are not authorized'}), 401
 
 if __name__ == '__main__':
