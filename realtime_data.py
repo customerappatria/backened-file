@@ -1,5 +1,6 @@
 import requests
 from datetime import datetime
+import logging
 
 AUTH_URL = 'https://lb.solinteg-cloud.com/openapi/v2/loginv2/auth'
 AUTH_ACCOUNT = 'shailendra.nair@atriapower.com'
@@ -9,12 +10,15 @@ DAY_AGGREGATE_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryDayAgg
 MONTH_AGGREGATE_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryMonthAggregateValues'
 DEVICE_SN = 'A102300100402049'
 
+logging.basicConfig(level=logging.INFO)
+
 def get_auth_token():
     payload = {
         'authAccount': AUTH_ACCOUNT,
         'authPassword': AUTH_PASSWORD
     }
     response = requests.post(AUTH_URL, json=payload)
+    logging.info(f'Auth response: {response.status_code} {response.text}')
     response.raise_for_status()
     auth_data = response.json()
     return auth_data['body']
@@ -65,8 +69,9 @@ def main():
         
         return combined_data
     except (requests.exceptions.RequestException, KeyError, ValueError) as e:
+        logging.error(f'Error fetching data: {e}')
         return {'error': str(e)}
 
 if __name__ == '__main__':
     result = main()
-   
+    print(result)
