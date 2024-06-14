@@ -43,11 +43,14 @@ async def send_otp():
         if phone_number:
             try:
                 verification = client.verify.v2.services(TWILIO_SERVICE_SID).verifications.create(to=phone_number, channel='sms')
+                logging.info(f'OTP sent to {phone_number}: {verification.status}')
                 return jsonify({'status': verification.status}), 200
             except Exception as e:
                 logging.error(f'Error sending OTP: {str(e)}')
                 return jsonify({'error': str(e)}), 500
-        return jsonify({'error': 'Phone number is required'}), 400
+        else:
+            logging.error('Phone number is required')
+            return jsonify({'error': 'Phone number is required'}), 400
     except Exception as e:
         logging.error(f'Error processing send-otp request: {str(e)}')
         return jsonify({'error': 'Bad request'}), 400
@@ -66,12 +69,16 @@ async def verify_otp():
                     session_token = secrets.token_hex(16)
                     expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRATION_MINUTES)
                     valid_tokens[session_token] = expiration_time
+                    logging.info(f'OTP verified for {phone_number}: {verification_check.status}')
                     return jsonify({'status': 'approved', 'session_token': session_token}), 200
+                logging.info(f'OTP verification failed for {phone_number}: {verification_check.status}')
                 return jsonify({'status': 'denied'}), 400
             except Exception as e:
                 logging.error(f'Error verifying OTP: {str(e)}')
                 return jsonify({'error': str(e)}), 500
-        return jsonify({'error': 'Phone number and OTP are required'}), 400
+        else:
+            logging.error('Phone number and OTP are required')
+            return jsonify({'error': 'Phone number and OTP are required'}), 400
     except Exception as e:
         logging.error(f'Error processing verify-otp request: {str(e)}')
         return jsonify({'error': 'Bad request'}), 400
