@@ -17,11 +17,15 @@ def get_auth_token():
         'authAccount': AUTH_ACCOUNT,
         'authPassword': AUTH_PASSWORD
     }
-    response = requests.post(AUTH_URL, json=payload)
-    logging.info(f'Auth response: {response.status_code} {response.text}')
-    response.raise_for_status()
-    auth_data = response.json()
-    return auth_data['body']
+    try:
+        response = requests.post(AUTH_URL, json=payload)
+        logging.info(f'Auth response: {response.status_code} {response.text}')
+        response.raise_for_status()
+        auth_data = response.json()
+        return auth_data['body']
+    except requests.exceptions.RequestException as e:
+        logging.error(f'Error getting auth token: {str(e)}')
+        raise
 
 def get_data(url, token, params):
     headers = {
@@ -29,9 +33,14 @@ def get_data(url, token, params):
         'Accept': 'application/json',
         'token': token
     }
-    response = requests.get(url, headers=headers, params=params)
-    response.raise_for_status()
-    return response.json()
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        logging.info(f'Data response from {url}: {response.status_code} {response.text}')
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logging.error(f'Error getting data from {url}: {str(e)}')
+        raise
 
 def get_current_month_dates():
     now = datetime.now()
@@ -69,7 +78,7 @@ def main():
         
         return combined_data
     except (requests.exceptions.RequestException, KeyError, ValueError) as e:
-        logging.error(f'Error fetching data: {e}')
+        logging.error(f'Error fetching data: {str(e)}')
         return {'error': str(e)}
 
 if __name__ == '__main__':
