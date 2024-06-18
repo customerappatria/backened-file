@@ -1,5 +1,4 @@
-quart
-quart-cors
-twilio
+flask
+flask-cors
 requests
 hypercorn
