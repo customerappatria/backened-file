@@ -12,9 +12,9 @@ app = Quart(__name__)
 app = cors(app, allow_origin="*")
 app.secret_key = secrets.token_hex(16)
 
-TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
-TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
-TWILIO_SERVICE_SID = os.environ.get('TWILIO_SERVICE_SID')
+TWILIO_ACCOUNT_SID = os.environ('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.environ('TWILIO_AUTH_TOKEN')
+TWILIO_SERVICE_SID = os.environ('TWILIO_SERVICE_SID')
 
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
