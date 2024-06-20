@@ -54,27 +54,33 @@ def fetch_data(device_sn, token):
 def main(device_sn):
     try:
         token = get_auth_token()
-        realtime_data, day_aggregate_data, month_aggregate_data = fetch_data(device_sn, token)
+        data_results = fetch_data(device_sn, token)
         
         combined_data = {}
+        
+        realtime_data, day_aggregate_data, month_aggregate_data = data_results
         
         if realtime_data and 'body' in realtime_data:
             combined_data.update(realtime_data['body'])
         else:
-            return {'error': 'Failed to fetch realtime data.'}
-        
+            print(f"Realtime data error: {realtime_data}")
+            combined_data['realtime_data_error'] = 'Failed to fetch realtime data.'
+
         if day_aggregate_data and 'body' in day_aggregate_data:
             combined_data.update(day_aggregate_data['body'])
         else:
-            return {'error': 'Failed to fetch day aggregate data.'}
+            print(f"Day aggregate data error: {day_aggregate_data}")
+            combined_data['day_aggregate_data_error'] = 'Failed to fetch day aggregate data.'
 
         if month_aggregate_data and 'body' in month_aggregate_data:
             combined_data['productionThisMonth'] = month_aggregate_data['body'].get('pvGeneration', 'N/A')
         else:
+            print(f"Month aggregate data error: {month_aggregate_data}")
             combined_data['productionThisMonth'] = 'N/A'
 
         return combined_data
     except (requests.exceptions.RequestException, KeyError, ValueError) as e:
+        print(f"Error in main: {e}")
         return {'error': str(e)}
 
 if __name__ == "__main__":
