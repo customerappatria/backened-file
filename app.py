@@ -1,26 +1,21 @@
-from flask import Flask, jsonify
-from flask_cors import CORS
-from realtime_data import main
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
-import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+import os
 import requests
 from realtime_data import main
 
 app = Flask(__name__)
 CORS(app)
 
+# Ensure environment variables are correctly retrieved
 AIRTABLE_BASE_ID = os.environ.get('AIRTABLE_BASE_ID')
-AIRTABLE_TABLE_ID =  os.environ.get('AIRTABLE_TABLE_ID')
-AIRTABLE_API_URL = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_ID}'
+AIRTABLE_TABLE_ID = os.environ.get('AIRTABLE_TABLE_ID')
 AIRTABLE_TOKEN = os.environ.get('AIRTABLE_TOKEN')
+
+if not AIRTABLE_BASE_ID or not AIRTABLE_TABLE_ID or not AIRTABLE_TOKEN:
+    raise ValueError("Environment variables AIRTABLE_BASE_ID, AIRTABLE_TABLE_ID, and AIRTABLE_TOKEN must be set")
+
+AIRTABLE_API_URL = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_ID}'
 
 @app.route('/api/check_phone', methods=['POST'])
 def check_phone():
@@ -53,10 +48,3 @@ def dashboard_data():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
-@app.route('/api/dashboard', methods=['GET'])
-def dashboard_data():
-    result = main()
-    return jsonify(result)
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=os.getenv('PORT', 5001))
