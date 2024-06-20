@@ -1,10 +1,11 @@
+import os
 import requests
 import json
 from datetime import datetime
 
 AUTH_URL = 'https://lb.solinteg-cloud.com/openapi/v2/loginv2/auth'
-AUTH_ACCOUNT = 'shailendra.nair@atriapower.com'
-AUTH_PASSWORD = 'SolarEnergy'
+AUTH_ACCOUNT = os.environ.get('AUTH_ACCOUNT')
+AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD')
 BASE_DATA_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryDeviceRealtimeData'
 DAY_AGGREGATE_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryDayAggregateValues'
 MONTH_AGGREGATE_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryMonthAggregateValues'
