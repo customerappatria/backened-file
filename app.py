@@ -8,9 +8,24 @@ app = Flask(__name__)
 CORS(app)
 
 AIRTABLE_BASE_ID = os.environ.get('AIRTABLE_BASE_ID')
-AIRTABLE_TABLE_ID = os.environ.get('AIRTABLE_TABLE_ID')
+AIRTABLE_TABLE_ID_USERS = os.environ.get('AIRTABLE_TABLE_ID_USERS')
+AIRTABLE_TABLE_ID_DEVICES = os.environ.get('AIRTABLE_TABLE_ID_DEVICES')
+AIRTABLE_API_URL_USERS = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_ID_USERS}'
+AIRTABLE_API_URL_DEVICES = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_ID_DEVICES}'
 AIRTABLE_TOKEN = os.environ.get('AIRTABLE_TOKEN')
-AIRTABLE_API_URL = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_ID}'
+
+def fetch_linked_devices(device_ids):
+    headers = {
+        'Authorization': f'Bearer {AIRTABLE_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    device_sns = []
+    for device_id in device_ids:
+        response = requests.get(f"{AIRTABLE_API_URL_DEVICES}/{device_id}", headers=headers)
+        response.raise_for_status()
+        device_record = response.json().get('fields', {})
+        device_sns.append(device_record.get('Device Serial Number'))
+    return device_sns
 
 @app.route('/api/check_phone', methods=['POST'])
 def check_phone():
@@ -21,23 +36,25 @@ def check_phone():
         'Authorization': f'Bearer {AIRTABLE_TOKEN}',
         'Content-Type': 'application/json'
     }
-    response = requests.get(AIRTABLE_API_URL, headers=headers)
+    
+    # Fetch user records
+    response = requests.get(f"{AIRTABLE_API_URL_USERS}?filterByFormula={{Phone}}='{phone_number}'", headers=headers)
     response.raise_for_status()
-    records = response.json().get('records', [])
+    user_records = response.json().get('records', [])
     
-    devices = []
-    name = None
-
-    for record in records:
-        if record['fields'].get('Phone') == phone_number:
-            devices.append(record['fields'].get('Device'))
-            if not name:
-                name = record['fields'].get('Name')
-
-    if devices:
-        return jsonify({'status': 'success', 'name': name, 'devices': devices})
+    if not user_records:
+        return jsonify({'status': 'error', 'message': 'Phone number not found'}), 404
     
-    return jsonify({'status': 'error', 'message': 'Phone number not found'}), 404
+    # Get user's name and device list
+    user_record = user_records[0]['fields']
+    user_name = user_record.get('Name')
+    linked_device_ids = user_record.get('Device', [])
+    
+    if linked_device_ids:
+        device_sns = fetch_linked_devices(linked_device_ids)
+        return jsonify({'status': 'success', 'name': user_name, 'devices': device_sns, 'default_device': device_sns[0]})
+    
+    return jsonify({'status': 'error', 'message': 'No devices found for this phone number'}), 404
 
 @app.route('/api/dashboard', methods=['POST'])
 def dashboard_data():
