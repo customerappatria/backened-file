@@ -1,20 +1,14 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import os
 import requests
 from realtime_data import main
 
 app = Flask(__name__)
 CORS(app)
 
-# Ensure environment variables are correctly retrieved
 AIRTABLE_BASE_ID = os.environ.get('AIRTABLE_BASE_ID')
 AIRTABLE_TABLE_ID = os.environ.get('AIRTABLE_TABLE_ID')
 AIRTABLE_TOKEN = os.environ.get('AIRTABLE_TOKEN')
-
-if not AIRTABLE_BASE_ID or not AIRTABLE_TABLE_ID or not AIRTABLE_TOKEN:
-    raise ValueError("Environment variables AIRTABLE_BASE_ID, AIRTABLE_TABLE_ID, and AIRTABLE_TOKEN must be set")
-
 AIRTABLE_API_URL = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_ID}'
 
 @app.route('/api/check_phone', methods=['POST'])
@@ -30,9 +24,17 @@ def check_phone():
     response.raise_for_status()
     records = response.json().get('records', [])
     
+    devices = []
+    name = None
+
     for record in records:
         if record['fields'].get('Phone') == phone_number:
-            return jsonify({'status': 'success', 'device_sn': record['fields'].get('Device')})
+            devices.append(record['fields'].get('Device'))
+            if not name:
+                name = record['fields'].get('Name')
+
+    if devices:
+        return jsonify({'status': 'success', 'name': name, 'devices': devices})
     
     return jsonify({'status': 'error', 'message': 'Phone number not found'}), 404
 
