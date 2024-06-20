@@ -3,3 +3,5 @@ flask-cors
 requests
 hypercorn
 python-dotenv
+pyairtable
+airtable
