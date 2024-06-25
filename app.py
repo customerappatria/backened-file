@@ -60,10 +60,11 @@ def check_phone():
 def dashboard_data():
     data = request.json
     device_sn = data.get('device_sn')
+    date = data.get('date')
     if not device_sn:
         return jsonify({'error': 'Device serial number is required'}), 400
 
-    result = main(device_sn)
+    result = main(device_sn, date)
     return jsonify(result)
 
 if __name__ == '__main__':
