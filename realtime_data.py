@@ -116,7 +116,7 @@ def main(device_sn, date, view_mode=None, month=None, year=None):
                 combined_data['productionYear'] = production_year_data['body']
             else:
                 combined_data['productionYear'] = []
-        print(combined_data)
+        
         return combined_data
     except (requests.exceptions.RequestException, KeyError, ValueError) as e:
         return {'error': str(e)}
