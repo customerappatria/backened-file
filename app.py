@@ -61,10 +61,14 @@ def dashboard_data():
     data = request.json
     device_sn = data.get('device_sn')
     date = data.get('date')
+    view_mode = data.get('view_mode')
+    month = data.get('month')
+    year = data.get('year')
+    
     if not device_sn:
         return jsonify({'error': 'Device serial number is required'}), 400
 
-    result = main(device_sn, date)
+    result = main(device_sn, date, view_mode, month, year)
     return jsonify(result)
 
 if __name__ == '__main__':
