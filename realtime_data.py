@@ -10,6 +10,8 @@ BASE_DATA_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryDeviceReal
 DAY_AGGREGATE_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryDayAggregateValues'
 MONTH_AGGREGATE_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryMonthAggregateValues'
 PRODUCTION_DAY_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryProductionDay'
+MONTH_PRODUCTION_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryProductionMonth'
+YEAR_PRODUCTION_URL = 'https://lb.solinteg-cloud.com/openapi/v2/device/queryProductionYear'
 
 def get_auth_token():
     payload = {
@@ -42,6 +44,20 @@ def fetch_production_day_data(device_sn, date, token):
     data = get_data(PRODUCTION_DAY_URL, token, params)
     return data
 
+def fetch_production_month_data(device_sn, month, token):
+    start_date = month + '01'
+    end_date = month + '31'
+    params = {'deviceSn': device_sn, 'startDate': start_date, 'endDate': end_date}
+    data = get_data(MONTH_PRODUCTION_URL, token, params)
+    return data
+
+def fetch_production_year_data(device_sn, year, token):
+    start_date = year + '0101'
+    end_date = year + '1231'
+    params = {'deviceSn': device_sn, 'startDate': start_date, 'endDate': end_date}
+    data = get_data(YEAR_PRODUCTION_URL, token, params)
+    return data
+
 def fetch_data(device_sn, token, date):
     start_date, end_date = get_current_month_dates()
     
@@ -58,7 +74,7 @@ def fetch_data(device_sn, token, date):
         data_results.append(data)
     return data_results
 
-def main(device_sn, date):
+def main(device_sn, date, view_mode=None, month=None, year=None):
     try:
         token = get_auth_token()
         data_results = fetch_data(device_sn, token, date)
@@ -87,6 +103,20 @@ def main(device_sn, date):
         else:
             combined_data['productionDay'] = []
         
+        if view_mode == 'month' and month:
+            production_month_data = fetch_production_month_data(device_sn, month, token)
+            if production_month_data and 'body' in production_month_data:
+                combined_data['productionMonth'] = production_month_data['body']
+            else:
+                combined_data['productionMonth'] = []
+        
+        if view_mode == 'year' and year:
+            production_year_data = fetch_production_year_data(device_sn, year, token)
+            if production_year_data and 'body' in production_year_data:
+                combined_data['productionYear'] = production_year_data['body']
+            else:
+                combined_data['productionYear'] = []
+        print(combined_data)
         return combined_data
     except (requests.exceptions.RequestException, KeyError, ValueError) as e:
         return {'error': str(e)}
