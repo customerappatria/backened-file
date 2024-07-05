@@ -2,6 +2,7 @@ import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import requests
+from twilio.rest import Client
 from realtime_data import main
 
 app = Flask(__name__)
@@ -13,6 +14,12 @@ AIRTABLE_TABLE_ID_DEVICES = os.environ.get('AIRTABLE_TABLE_ID_DEVICES')
 AIRTABLE_API_URL_USERS = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_ID_USERS}'
 AIRTABLE_API_URL_DEVICES = f'https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_ID_DEVICES}'
 AIRTABLE_TOKEN = os.environ.get('AIRTABLE_TOKEN')
+
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
+TWILIO_SERVICE_SID = os.environ.get('TWILIO_SERVICE_SID')
+
+client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 def fetch_linked_devices(device_ids):
     headers = {
@@ -37,7 +44,6 @@ def check_phone():
         'Content-Type': 'application/json'
     }
     
-    # Fetch user records
     response = requests.get(f"{AIRTABLE_API_URL_USERS}?filterByFormula={{Phone}}='{phone_number}'", headers=headers)
     response.raise_for_status()
     user_records = response.json().get('records', [])
@@ -45,16 +51,40 @@ def check_phone():
     if not user_records:
         return jsonify({'status': 'error', 'message': 'Phone number not found'}), 404
     
-    # Get user's name and device list
     user_record = user_records[0]['fields']
     user_name = user_record.get('Name')
     linked_device_ids = user_record.get('Device', [])
     
     if linked_device_ids:
         device_sns = fetch_linked_devices(linked_device_ids)
+        send_otp(phone_number)  # Send OTP using Twilio
         return jsonify({'status': 'success', 'name': user_name, 'devices': device_sns, 'default_device': device_sns[0]})
     
     return jsonify({'status': 'error', 'message': 'No devices found for this phone number'}), 404
+
+def send_otp(phone_number):
+    # Ensure the phone number includes the country code +91
+    if not phone_number.startswith("+91"):
+        phone_number = f"+91{phone_number}"
+    
+    client.verify.services(TWILIO_SERVICE_SID).verifications.create(to=phone_number, channel='sms')
+
+@app.route('/api/verify_otp', methods=['POST'])
+def verify_otp():
+    data = request.json
+    phone_number = data.get('phoneNumber')
+    otp = data.get('otp')
+    
+    # Ensure the phone number includes the country code +91
+    if not phone_number.startswith("+91"):
+        phone_number = f"+91{phone_number}"
+    
+    verification_check = client.verify.services(TWILIO_SERVICE_SID).verification_checks.create(to=phone_number, code=otp)
+    
+    if verification_check.status == "approved":
+        return jsonify({'status': 'success', 'message': 'OTP verified successfully'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Invalid OTP'}), 400
 
 @app.route('/api/dashboard', methods=['POST'])
 def dashboard_data():
