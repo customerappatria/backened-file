@@ -1,7 +1,7 @@
-import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import requests
+from realtime_data import main  # Ensure this import statement is correct
 
 app = Flask(__name__)
 CORS(app)
@@ -36,7 +36,6 @@ def check_phone():
         'Content-Type': 'application/json'
     }
     
-    # Fetch user records
     response = requests.get(f"{AIRTABLE_API_URL_USERS}?filterByFormula={{Phone}}='{phone_number}'", headers=headers)
     response.raise_for_status()
     user_records = response.json().get('records', [])
@@ -44,7 +43,6 @@ def check_phone():
     if not user_records:
         return jsonify({'status': 'error', 'message': 'Phone number not found'}), 404
     
-    # Get user's name and device list
     user_record = user_records[0]['fields']
     user_name = user_record.get('Name')
     linked_device_ids = user_record.get('Device', [])
@@ -67,7 +65,7 @@ def dashboard_data():
     if not device_sn:
         return jsonify({'error': 'Device serial number is required'}), 400
 
-    result = main(device_sn, date, view_mode, month, year)
+    result = main(device_sn, date, view_mode, month, year)  # Ensure this call is correct
     return jsonify(result)
 
 if __name__ == '__main__':
